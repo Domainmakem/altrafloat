@@ -1,0 +1,68 @@
+{
+  "project_info": {
+    "project_number": "267926906231",
+    "firebase_url": "https://altrafloat-gen-z-default-rtdb.firebaseio.com",
+    "project_id": "altrafloat-gen-z",
+    "storage_bucket": "altrafloat-gen-z.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:267926906231:android:29e99d7bda71c68cebed72",
+        "android_client_info": {
+          "package_name": "com.example.altrafloat"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAWDpPEiQXsrQ7RTx1yNgVSYxW-qlb96Ow"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:267926906231:android:474b2ec5452709e5ebed72",
+        "android_client_info": {
+          "package_name": "com.example.altrafloat_gz"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAWDpPEiQXsrQ7RTx1yNgVSYxW-qlb96Ow"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:267926906231:android:734aff4093be998bebed72",
+        "android_client_info": {
+          "package_name": "com.example.ultra_agents_request"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAWDpPEiQXsrQ7RTx1yNgVSYxW-qlb96Ow"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

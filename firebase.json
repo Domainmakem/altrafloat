@@ -1,0 +1,43 @@
+{
+  "functions": {
+    "source": "functions",
+    "runtime": "nodejs22"
+  },
+  "firestore": {
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json"
+  },
+  "emulators": {
+    "firestore": {
+      "port": 8080
+    },
+    "ui": {
+      "enabled": false
+    },
+    "auth": {
+      "port": 9099
+    },
+    "functions": {
+      "port": 5001
+    }
+  },
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "altrafloat-gen-z",
+          "appId": "1:267926906231:android:29e99d7bda71c68cebed72",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "altrafloat-gen-z",
+          "configurations": {
+            "android": "1:267926906231:android:29e99d7bda71c68cebed72"
+          }
+        }
+      }
+    }
+  }
+}

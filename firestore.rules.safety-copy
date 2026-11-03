@@ -1,0 +1,413 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isOwner(userId) {
+      return request.auth != null && request.auth.uid == userId;
+    }
+
+    function validRegistrationId(role, registrationId) {
+      return (role == 'Agent'
+          && registrationId.matches('^G7[0-9]{6,7}$'))
+        || (role == 'Liquidity Officer'
+          && registrationId.matches('^(S0|C0)[0-9]{6,7}$'));
+    }
+
+    function isAuthorizedUser(userId, role) {
+      let profilePath = /databases/$(database)/documents/users/$(userId);
+      return exists(profilePath)
+        && get(profilePath).data.uid == userId
+        && get(profilePath).data.role == role
+        && (role == 'Agent' || get(profilePath).data.authorized == true)
+        && get(profilePath).data.id is string
+        && validRegistrationId(role, get(profilePath).data.id)
+        && exists(
+          /databases/$(database)/documents/registrationIds/$(get(profilePath).data.id)
+        )
+        && get(
+          /databases/$(database)/documents/registrationIds/$(get(profilePath).data.id)
+        ).data.uid == userId
+        && get(
+          /databases/$(database)/documents/registrationIds/$(get(profilePath).data.id)
+        ).data.role == role;
+    }
+
+    function isAuthorizedForRole(role) {
+      return request.auth != null
+        && isAuthorizedUser(request.auth.uid, role);
+    }
+
+    function hasRegistrationIdClaim(userId, registrationId) {
+      let claimPath = /databases/$(database)/documents/registrationIds/$(registrationId);
+      return existsAfter(claimPath)
+        && getAfter(claimPath).data.uid == userId;
+    }
+
+    function matchesLOProfile(userId, data) {
+      let profilePath = /databases/$(database)/documents/users/$(userId);
+      return isAuthorizedUser(userId, 'Liquidity Officer')
+        && data.uid == userId
+        && data.role == 'Liquidity Officer'
+        && data.authorized == true
+        && data.idValid == true
+        && validRegistrationId('Liquidity Officer', data.id)
+        && data.name == get(profilePath).data.username
+        && data.id == get(profilePath).data.id;
+    }
+
+    function validLOAvailability(userId, data) {
+      return data.keys().hasAll([
+          'uid', 'role', 'name', 'id', 'idValid', 'available',
+          'authorized', 'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'uid', 'role', 'name', 'id', 'idValid', 'available',
+          'authorized', 'createdAt', 'updatedAt'
+        ])
+        && data.id is string
+        && matchesLOProfile(userId, data)
+        && data.available is bool
+        && data.authorized == true
+        && data.idValid == true
+        && data.role == 'Liquidity Officer'
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function availableLOProjection(data) {
+      return data.available == true
+        && data.role == 'Liquidity Officer'
+        && data.authorized == true
+        && data.idValid == true;
+    }
+
+    function validFcmToken(data) {
+      return data.keys().hasAll([
+          'token', 'platform', 'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'token', 'platform', 'createdAt', 'updatedAt'
+        ])
+        && data.token is string
+        && data.token.size() > 0
+        && data.token.size() <= 4096
+        && data.platform == 'android'
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function validNewRequest() {
+      let data = request.resource.data;
+      let agentPath = /databases/$(database)/documents/users/$(request.auth.uid);
+      let availabilityPath = /databases/$(database)/documents/loAvailability/$(data.loUid);
+      return data.keys().hasAll([
+          'agentUid', 'agentName', 'agentId', 'loUid', 'loName', 'loId',
+          'type', 'amount', 'message', 'status', 'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'agentUid', 'agentName', 'agentId', 'loUid', 'loName', 'loId',
+          'type', 'amount', 'message', 'status', 'createdAt', 'updatedAt'
+        ])
+        && isAuthorizedForRole('Agent')
+        && data.agentUid == request.auth.uid
+        && data.agentName == get(agentPath).data.username
+        && data.agentId == get(agentPath).data.id
+        && data.loUid is string
+        && isAuthorizedUser(data.loUid, 'Liquidity Officer')
+        && exists(availabilityPath)
+        && get(availabilityPath).data.uid == data.loUid
+        && get(availabilityPath).data.available == true
+        && data.loName == get(availabilityPath).data.name
+        && data.loId == get(availabilityPath).data.id
+        && data.type in ['Cash Request', 'Airtime Request', 'Loan Request']
+        && data.amount is string
+        && data.amount.size() > 0
+        && data.message is string
+        && data.status == 'pending'
+        && data.createdAt == request.time
+        && data.updatedAt == request.time;
+    }
+
+    function isAgentCancellation() {
+      return isAuthorizedForRole('Agent')
+        && resource.data.agentUid == request.auth.uid
+        && resource.data.status == 'pending'
+        && request.resource.data.status == 'cancelled'
+        && request.resource.data.updatedAt == request.time
+        && request.resource.data.diff(resource.data)
+          .affectedKeys().hasOnly(['status', 'updatedAt']);
+    }
+
+    function isLORequestResponse() {
+      let changes = request.resource.data.diff(resource.data).affectedKeys();
+      let status = request.resource.data.status;
+      return isAuthorizedForRole('Liquidity Officer')
+        && resource.data.loUid == request.auth.uid
+        && resource.data.status == 'pending'
+        && status in ['accepted', 'declined']
+        && request.resource.data.updatedAt == request.time
+        && changes.hasOnly(['status', 'updatedAt', 'declineReason'])
+        && (
+          (status == 'declined'
+            && request.resource.data.declineReason is string
+            && request.resource.data.declineReason.size() > 0)
+          || (status == 'accepted'
+            && request.resource.data.get('declineReason', null)
+              == resource.data.get('declineReason', null))
+        );
+    }
+
+    function validConversation(data, requestId) {
+      return data.keys().hasAll([
+          'requestId', 'agentUid', 'loUid', 'participantUids', 'createdAt'
+        ])
+        && data.keys().hasOnly([
+          'requestId', 'agentUid', 'loUid', 'participantUids', 'createdAt'
+        ])
+        && data.requestId == requestId
+        && data.agentUid is string
+        && data.loUid is string
+        && data.agentUid != data.loUid
+        && data.participantUids is list
+        && data.participantUids.size() == 2
+        && data.participantUids.hasAll([data.agentUid, data.loUid])
+        && data.createdAt is timestamp;
+    }
+
+    function isAuthorizedConversationParticipant(data) {
+      return request.auth != null
+        && (
+          (data.agentUid == request.auth.uid
+            && isAuthorizedForRole('Agent'))
+          || (data.loUid == request.auth.uid
+            && isAuthorizedForRole('Liquidity Officer'))
+        );
+    }
+
+    function isAuthorizedChatUser() {
+      return isAuthorizedForRole('Agent')
+        || isAuthorizedForRole('Liquidity Officer');
+    }
+
+    function canAccessConversation(data) {
+      return request.auth != null
+        && request.auth.uid in data.participantUids
+        && isAuthorizedChatUser();
+    }
+
+    function conversationMatchesAcceptedRequest(data, requestId) {
+      let requestPath = /databases/$(database)/documents/requests/$(requestId);
+      let before = get(requestPath).data;
+      let after = getAfter(requestPath).data;
+      return after.status == 'accepted'
+        && after.agentUid == data.agentUid
+        && after.loUid == data.loUid
+        && (
+          before.status == 'accepted'
+          || (before.status == 'pending'
+            && request.auth.uid == after.loUid)
+        );
+    }
+
+    function canAccessConversationMessages(requestId) {
+      let conversationPath = /databases/$(database)/documents/conversations/$(requestId);
+      let conversation = get(conversationPath).data;
+      return exists(conversationPath)
+        && conversation.requestId == requestId
+        && canAccessConversation(conversation);
+    }
+
+    function validNewMessage(data, conversationId) {
+      return data.keys().hasAll(['senderUid', 'text', 'createdAt'])
+        && data.keys().hasOnly(['senderUid', 'text', 'createdAt'])
+        && data.senderUid == request.auth.uid
+        && data.text is string
+        && data.text.size() > 0
+        && data.text.size() <= 4000
+        && data.createdAt == request.time
+        && canAccessConversationMessages(conversationId);
+    }
+
+    function validRecipientReadReceipt(conversationId) {
+      let conversationPath = /databases/$(database)/documents/conversations/$(conversationId);
+      let conversation = get(conversationPath).data;
+      return canAccessConversationMessages(conversationId)
+        && resource.data.senderUid is string
+        && resource.data.senderUid in conversation.participantUids
+        && resource.data.senderUid != request.auth.uid
+        && !resource.data.keys().hasAny(['readAt'])
+        && request.resource.data.diff(resource.data)
+          .affectedKeys().hasOnly(['readAt'])
+        && request.resource.data.readAt == request.time;
+    }
+
+    function validRecipientDeliveryReceipt(conversationId) {
+      let conversationPath = /databases/$(database)/documents/conversations/$(conversationId);
+      let conversation = get(conversationPath).data;
+      return canAccessConversationMessages(conversationId)
+        && resource.data.senderUid is string
+        && resource.data.senderUid in conversation.participantUids
+        && resource.data.senderUid != request.auth.uid
+        && !resource.data.keys().hasAny(['deliveredAt'])
+        && request.resource.data.diff(resource.data)
+          .affectedKeys().hasOnly(['deliveredAt'])
+        && request.resource.data.deliveredAt == request.time;
+    }
+
+    function validUserProfile(userId) {
+      return request.resource.data.keys().hasAll([
+          'uid', 'username', 'email', 'role', 'id', 'category', 'authorized'
+        ])
+        && request.resource.data.keys().hasOnly([
+          'uid', 'username', 'email', 'role', 'id', 'category',
+          'authorized', 'updatedAt'
+        ])
+        && request.resource.data.uid == userId
+        && request.resource.data.username is string
+        && request.resource.data.email is string
+        && request.resource.data.role in ['Agent', 'Liquidity Officer']
+        && request.resource.data.id is string
+        && validRegistrationId(
+          request.resource.data.role,
+          request.resource.data.id
+        )
+        && request.resource.data.category is string
+        && request.resource.data.authorized is bool
+        && hasRegistrationIdClaim(userId, request.resource.data.id);
+    }
+
+    match /users/{userId} {
+      allow get: if isOwner(userId);
+      allow list: if false;
+      allow create: if isOwner(userId)
+        && validUserProfile(userId)
+        && request.resource.data.authorized == false;
+      allow update: if isOwner(userId)
+        && validUserProfile(userId)
+        && request.resource.data.role == resource.data.role
+        && request.resource.data.id == resource.data.id
+        && (
+          (!resource.data.keys().hasAny(['authorized'])
+            && request.resource.data.authorized == false)
+          || request.resource.data.authorized == resource.data.authorized
+        );
+      allow delete: if false;
+    }
+
+    match /users/{userId}/fcmTokens/{tokenDocumentId} {
+      allow get, list: if false;
+      allow create: if isOwner(userId)
+        && validFcmToken(request.resource.data)
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.updatedAt == request.time;
+      allow update: if isOwner(userId)
+        && validFcmToken(request.resource.data)
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.updatedAt == request.time;
+      allow delete: if isOwner(userId);
+    }
+
+    match /registrationIds/{registrationId} {
+      allow get: if request.auth != null;
+      allow list: if false;
+      allow create: if request.auth != null
+        && request.resource.data.keys().hasAll(['uid', 'role', 'createdAt'])
+        && request.resource.data.keys().hasOnly(['uid', 'role', 'createdAt'])
+        && request.resource.data.uid == request.auth.uid
+        && validRegistrationId(request.resource.data.role, registrationId)
+        && getAfter(
+          /databases/$(database)/documents/users/$(request.auth.uid)
+        ).data.id == registrationId
+        && getAfter(
+          /databases/$(database)/documents/users/$(request.auth.uid)
+        ).data.role == request.resource.data.role;
+      allow update, delete: if false;
+    }
+
+    match /loAvailability/{userId} {
+      allow get: if (isOwner(userId)
+          && isAuthorizedUser(userId, 'Liquidity Officer'))
+        || (isAuthorizedForRole('Agent')
+          && availableLOProjection(resource.data));
+      allow list: if isAuthorizedForRole('Agent')
+        && availableLOProjection(resource.data);
+      allow create: if isOwner(userId)
+        && isAuthorizedUser(userId, 'Liquidity Officer')
+        && validLOAvailability(userId, request.resource.data)
+        && request.resource.data.available == false;
+      allow update: if isOwner(userId)
+        && validLOAvailability(userId, request.resource.data)
+        && request.resource.data.uid == resource.data.uid
+        && request.resource.data.role == resource.data.role
+        && request.resource.data.id == resource.data.id
+        && request.resource.data.idValid == resource.data.idValid
+        && request.resource.data.authorized == resource.data.authorized
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.diff(resource.data)
+          .affectedKeys().hasOnly(['name', 'available', 'updatedAt']);
+      allow delete: if false;
+    }
+
+    match /requests/{requestId} {
+      allow get, list: if (
+          isAuthorizedForRole('Agent')
+          && resource.data.agentUid == request.auth.uid
+        ) || (
+          isAuthorizedForRole('Liquidity Officer')
+          && resource.data.loUid == request.auth.uid
+        );
+      allow create: if validNewRequest();
+      allow update: if isAgentCancellation() || isLORequestResponse();
+      allow delete: if false;
+    }
+
+    match /conversations/{requestId} {
+      allow get, list: if canAccessConversation(resource.data);
+      allow create: if validConversation(request.resource.data, requestId)
+        && request.resource.data.createdAt == request.time
+        && isAuthorizedConversationParticipant(request.resource.data)
+        && conversationMatchesAcceptedRequest(request.resource.data, requestId);
+      allow update, delete: if false;
+
+      match /messages/{messageId} {
+        allow get, list: if canAccessConversationMessages(requestId);
+        allow create: if validNewMessage(request.resource.data, requestId);
+        allow update: if validRecipientReadReceipt(requestId)
+          || validRecipientDeliveryReceipt(requestId);
+        allow delete: if false;
+      }
+    }
+
+    match /notifications/{notificationId} {
+      allow get, list: if request.auth != null
+        && resource.data.recipientUid == request.auth.uid;
+      allow create, update, delete: if false;
+    }
+
+    // Records user acceptance of the Privacy Policy and Terms.
+    match /policyAcceptances/{userId} {
+      allow get: if isOwner(userId);
+      allow list: if false;
+
+      allow create, update: if isOwner(userId)
+        && request.resource.data.keys().hasAll([
+          'uid', 'privacyPolicyVersion', 'termsVersion', 'acceptedAt'
+        ])
+        && request.resource.data.keys().hasOnly([
+          'uid', 'privacyPolicyVersion', 'termsVersion', 'acceptedAt'
+        ])
+        && request.resource.data.uid == userId
+        && request.resource.data.privacyPolicyVersion is string
+        && request.resource.data.termsVersion is string
+        && request.resource.data.acceptedAt == request.time;
+
+      allow delete: if false;
+    }
+
+    // AI Manager-only data; does not grant access to other collections.
+    match /aiManagerData/{document=**} {
+      allow read, write: if request.auth != null
+        && request.auth.token.aiManager == true;
+    }
+  }
+}

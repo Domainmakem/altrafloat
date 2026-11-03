@@ -1,0 +1,16 @@
+{
+  "name": "altrafloat-lo-authorization",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Local administrative workflow for LO authorization and availability projections",
+  "main": "lo-authorization.js",
+  "scripts": {
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "firebase-admin": "^13.5.0"
+  }
+}
