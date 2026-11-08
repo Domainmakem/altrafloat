@@ -4393,7 +4393,6 @@ class _SettingsPageState extends State<_SettingsPage> {
     );
   }
 }
-
 // ============================================================
 // CHAT PAGE
 // ============================================================
@@ -4430,11 +4429,14 @@ class _ChatPageState extends State<ChatPage> {
 
   bool _isLive = false;
   StreamSubscription<cs.ChatPage<cs.ChatMessage, cs.ChatMessageCursor>>?
-  _subscription;
+      _subscription;
+
   List<cs.ChatMessage> _liveMessages = [];
   cs.ChatMessageCursor? _olderCursor;
   bool _hasMore = false;
   bool _isLoadingOlder = false;
+  bool _hasLoadedOlderMessages = false;
+
   final Set<String> _markedDelivered = {};
   final Set<String> _markedRead = {};
 
@@ -4446,6 +4448,7 @@ class _ChatPageState extends State<ChatPage> {
   @override
   void initState() {
     super.initState();
+
     final hasCustomService = widget.chatService != null;
     final isLiveChatId =
         widget.chatId != 'agent_lo' && widget.chatId != 'test_chat';
@@ -4462,25 +4465,57 @@ class _ChatPageState extends State<ChatPage> {
 
   void _initLiveChat() {
     _scrollController.addListener(_onScroll);
+
     try {
       _subscription = _effectiveChatService
           .watchLatestMessages(widget.chatId)
           .listen(
-            (page) {
-              if (!mounted) return;
-              setState(() {
-                _liveMessages = List<cs.ChatMessage>.from(page.items);
-                _olderCursor = page.nextCursor;
-                _hasMore = page.hasMore;
+        (page) {
+          if (!mounted) return;
+
+          setState(() {
+            final merged = <String, cs.ChatMessage>{
+              for (final message in _liveMessages)
+                message.id: message,
+              for (final message in page.items)
+                message.id: message,
+            };
+
+            _liveMessages = merged.values.toList()
+              ..sort((a, b) {
+                final aTime = a.createdAt;
+                final bTime = b.createdAt;
+
+                if (aTime == null && bTime == null) {
+                  return a.id.compareTo(b.id);
+                }
+                if (aTime == null) return -1;
+                if (bTime == null) return 1;
+
+                final byTime = aTime.compareTo(bTime);
+                return byTime != 0
+                    ? byTime
+                    : a.id.compareTo(b.id);
               });
-              _handleIncomingReceipts(page.items);
-            },
-            onError: (error) {
-              if (kDebugMode) debugPrint('Live chat stream error: $error');
-            },
-          );
+
+            if (!_hasLoadedOlderMessages) {
+              _olderCursor = page.nextCursor;
+              _hasMore = page.hasMore;
+            }
+          });
+
+          _handleIncomingReceipts(page.items);
+        },
+        onError: (error) {
+          if (kDebugMode) {
+            debugPrint('Live chat stream error: $error');
+          }
+        },
+      );
     } catch (e) {
-      if (kDebugMode) debugPrint('Could not initialize live chat: $e');
+      if (kDebugMode) {
+        debugPrint('Could not initialize live chat: $e');
+      }
     }
   }
 
@@ -4493,37 +4528,66 @@ class _ChatPageState extends State<ChatPage> {
   }
 
   Future<void> _loadOlderMessages() async {
-    if (!_hasMore || _isLoadingOlder || _olderCursor == null) return;
+    if (!_hasMore || _isLoadingOlder || _olderCursor == null) {
+      return;
+    }
+
     _isLoadingOlder = true;
+
     try {
-      final olderPage = await _effectiveChatService.loadOlderMessages(
+      final olderPage =
+          await _effectiveChatService.loadOlderMessages(
         widget.chatId,
         before: _olderCursor,
       );
+
       if (!mounted) return;
+
       setState(() {
+        _hasLoadedOlderMessages = true;
         _olderCursor = olderPage.nextCursor;
         _hasMore = olderPage.hasMore;
-        final existingIds = _liveMessages.map((m) => m.id).toSet();
+
+        final existingIds =
+            _liveMessages.map((message) => message.id).toSet();
+
         for (final item in olderPage.items) {
           if (!existingIds.contains(item.id)) {
             _liveMessages.add(item);
           }
         }
+
+        _liveMessages.sort((a, b) {
+          final aTime = a.createdAt;
+          final bTime = b.createdAt;
+
+          if (aTime == null && bTime == null) {
+            return a.id.compareTo(b.id);
+          }
+          if (aTime == null) return -1;
+          if (bTime == null) return 1;
+
+          final byTime = aTime.compareTo(bTime);
+          return byTime != 0
+              ? byTime
+              : a.id.compareTo(b.id);
+        });
       });
     } catch (e) {
-      if (kDebugMode) debugPrint('Error loading older messages: $e');
+      if (kDebugMode) {
+        debugPrint('Error loading older messages: $e');
+      }
     } finally {
       _isLoadingOlder = false;
     }
   }
 
   void _handleIncomingReceipts(List<cs.ChatMessage> items) {
-    final myUid =
-        widget.currentUid ??
+    final myUid = widget.currentUid ??
         (Firebase.apps.isNotEmpty
             ? FirebaseAuth.instance.currentUser?.uid
             : null);
+
     if (myUid == null) return;
 
     for (final message in items) {
@@ -4531,43 +4595,64 @@ class _ChatPageState extends State<ChatPage> {
         if (message.deliveredAt == null &&
             !_markedDelivered.contains(message.id)) {
           _markedDelivered.add(message.id);
+
           _effectiveChatService
-              .markDelivered(requestId: widget.chatId, messageId: message.id)
+              .markDelivered(
+                requestId: widget.chatId,
+                messageId: message.id,
+              )
               .catchError((_) {});
         }
-        if (message.readAt == null && !_markedRead.contains(message.id)) {
+
+        if (message.readAt == null &&
+            !_markedRead.contains(message.id)) {
           _markedRead.add(message.id);
+
           _effectiveChatService
-              .markRead(requestId: widget.chatId, messageId: message.id)
+              .markRead(
+                requestId: widget.chatId,
+                messageId: message.id,
+              )
               .catchError((_) {});
         }
       } else {
-        if (message.deliveredAt != null) _markedDelivered.add(message.id);
-        if (message.readAt != null) _markedRead.add(message.id);
+        if (message.deliveredAt != null) {
+          _markedDelivered.add(message.id);
+        }
+        if (message.readAt != null) {
+          _markedRead.add(message.id);
+        }
       }
     }
   }
 
   Future<void> _loadLegacyMessages() async {
     final all = await AppStorage.loadChatMessages();
-    final chatMessages =
-        all
-            .where(
-              (message) => (message['chatId'] ?? 'agent_lo') == widget.chatId,
-            )
-            .toList();
+
+    final chatMessages = all
+        .where(
+          (message) =>
+              (message['chatId'] ?? 'agent_lo') == widget.chatId,
+        )
+        .toList();
+
     var hasReadUpdates = false;
+
     for (final message in chatMessages) {
-      if (_legacyMessageRole(message) != _normalizeRole(widget.currentRole) &&
+      if (_legacyMessageRole(message) !=
+              _normalizeRole(widget.currentRole) &&
           message['read'] != 'true') {
         message['read'] = 'true';
         hasReadUpdates = true;
       }
     }
+
     if (hasReadUpdates) {
       await AppStorage.saveChatMessages(all);
     }
+
     if (!mounted) return;
+
     setState(() {
       _legacyMessages = chatMessages;
     });
@@ -4575,6 +4660,7 @@ class _ChatPageState extends State<ChatPage> {
 
   String _normalizeRole(String role) {
     final normalized = role.toLowerCase();
+
     return normalized == 'lo' || normalized.contains('liquidity')
         ? 'Liquidity Officer'
         : 'Agent';
@@ -4582,16 +4668,22 @@ class _ChatPageState extends State<ChatPage> {
 
   String _legacyMessageRole(Map<String, String> message) {
     final role = message['senderRole'];
-    if (role != null && role.isNotEmpty) return _normalizeRole(role);
+
+    if (role != null && role.isNotEmpty) {
+      return _normalizeRole(role);
+    }
+
     return _normalizeRole(message['sender'] ?? 'Agent');
   }
 
   Future<void> _sendMessage() async {
     final text = _messageController.text.trim();
+
     if (text.isEmpty) return;
 
     if (_isLive) {
       _messageController.clear();
+
       try {
         await _effectiveChatService.sendMessage(
           requestId: widget.chatId,
@@ -4599,9 +4691,12 @@ class _ChatPageState extends State<ChatPage> {
         );
       } catch (error) {
         if (!mounted) return;
+
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Could not send message. Please try again.'),
+            content: Text(
+              'Could not send message. Please try again.',
+            ),
           ),
         );
       }
@@ -4614,6 +4709,7 @@ class _ChatPageState extends State<ChatPage> {
         'chatId': widget.chatId,
         'read': 'false',
       };
+
       await AppStorage.appendChatMessage(message);
       _messageController.clear();
       await _loadLegacyMessages();
@@ -4643,7 +4739,9 @@ class _ChatPageState extends State<ChatPage> {
         break;
     }
 
-    final isRead = message.status == cs.ChatMessageStatus.read;
+    final isRead =
+        message.status == cs.ChatMessageStatus.read;
+
     return Icon(
       iconData,
       key: ValueKey('chat-read-${message.text}-$isRead'),
@@ -4654,10 +4752,12 @@ class _ChatPageState extends State<ChatPage> {
 
   String _formatMessageTime(DateTime? date) {
     if (date == null) return '';
+
     final local = date.toLocal();
     final hour = local.hour % 12 == 0 ? 12 : local.hour % 12;
     final suffix = local.hour >= 12 ? 'PM' : 'AM';
     final minute = local.minute.toString().padLeft(2, '0');
+
     return '$hour:$minute $suffix';
   }
 
@@ -4679,8 +4779,9 @@ class _ChatPageState extends State<ChatPage> {
       body: Column(
         children: [
           Expanded(
-            child:
-                _isLive ? _buildLiveMessageList() : _buildLegacyMessageList(),
+            child: _isLive
+                ? _buildLiveMessageList()
+                : _buildLegacyMessageList(),
           ),
           SafeArea(
             child: Padding(
@@ -4694,7 +4795,8 @@ class _ChatPageState extends State<ChatPage> {
                         hintText: 'Type message...',
                         filled: true,
                         fillColor: Colors.white,
-                        contentPadding: const EdgeInsets.symmetric(
+                        contentPadding:
+                            const EdgeInsets.symmetric(
                           horizontal: 16,
                           vertical: 15,
                         ),
@@ -4721,11 +4823,11 @@ class _ChatPageState extends State<ChatPage> {
   }
 
   Widget _buildLiveMessageList() {
-    final myUid =
-        widget.currentUid ??
+    final myUid = widget.currentUid ??
         (Firebase.apps.isNotEmpty
             ? FirebaseAuth.instance.currentUser?.uid
             : null);
+
     final displayMessages = _liveMessages.reversed.toList();
 
     return ListView.builder(
@@ -4734,15 +4836,21 @@ class _ChatPageState extends State<ChatPage> {
       itemCount: displayMessages.length,
       itemBuilder: (context, index) {
         final message = displayMessages[index];
-        final isMine = myUid != null && message.senderUid == myUid;
-        final formattedTime = _formatMessageTime(message.createdAt);
+        final isMine =
+            myUid != null && message.senderUid == myUid;
+        final formattedTime =
+            _formatMessageTime(message.createdAt);
 
         return Align(
-          alignment: isMine ? Alignment.centerRight : Alignment.centerLeft,
+          alignment:
+              isMine ? Alignment.centerRight : Alignment.centerLeft,
           child: Container(
-            key: ValueKey('chat-message-${message.text}'),
+            key: ValueKey('chat-message-${message.id}'),
             margin: const EdgeInsets.only(bottom: 8),
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            padding: const EdgeInsets.symmetric(
+              horizontal: 12,
+              vertical: 10,
+            ),
             constraints: const BoxConstraints(maxWidth: 280),
             decoration: BoxDecoration(
               color: isMine ? blue : Colors.white,
@@ -4765,7 +4873,8 @@ class _ChatPageState extends State<ChatPage> {
                     Text(
                       formattedTime,
                       style: TextStyle(
-                        color: isMine ? Colors.white70 : greyText,
+                        color:
+                            isMine ? Colors.white70 : greyText,
                         fontSize: 10,
                       ),
                     ),
@@ -4790,17 +4899,21 @@ class _ChatPageState extends State<ChatPage> {
       itemBuilder: (context, index) {
         final message = _legacyMessages[index];
         final senderRole = _legacyMessageRole(message);
-        final isMine = senderRole == _normalizeRole(widget.currentRole);
+        final isMine =
+            senderRole == _normalizeRole(widget.currentRole);
         final isRead = message['read'] == 'true';
+
         return Align(
-          alignment:
-              senderRole == 'Agent'
-                  ? Alignment.centerLeft
-                  : Alignment.centerRight,
+          alignment: senderRole == 'Agent'
+              ? Alignment.centerLeft
+              : Alignment.centerRight,
           child: Container(
             key: ValueKey('chat-message-${message['text']}'),
             margin: const EdgeInsets.only(bottom: 8),
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            padding: const EdgeInsets.symmetric(
+              horizontal: 12,
+              vertical: 10,
+            ),
             constraints: const BoxConstraints(maxWidth: 280),
             decoration: BoxDecoration(
               color: isMine ? blue : Colors.white,
@@ -4823,7 +4936,8 @@ class _ChatPageState extends State<ChatPage> {
                     Text(
                       message['time'] ?? '',
                       style: TextStyle(
-                        color: isMine ? Colors.white70 : greyText,
+                        color:
+                            isMine ? Colors.white70 : greyText,
                         fontSize: 10,
                       ),
                     ),
@@ -4831,10 +4945,13 @@ class _ChatPageState extends State<ChatPage> {
                       const SizedBox(width: 4),
                       Icon(
                         isRead ? Icons.done_all : Icons.check,
-                        key: ValueKey('chat-read-${message['text']}-$isRead'),
+                        key: ValueKey(
+                          'chat-read-${message['text']}-$isRead',
+                        ),
                         size: 15,
-                        color:
-                            isRead ? const Color(0xFF4FC3F7) : Colors.white70,
+                        color: isRead
+                            ? const Color(0xFF4FC3F7)
+                            : Colors.white70,
                       ),
                     ],
                   ],
@@ -4847,7 +4964,6 @@ class _ChatPageState extends State<ChatPage> {
     );
   }
 }
-
 class NotificationListPage extends StatelessWidget {
   const NotificationListPage({super.key});
 
