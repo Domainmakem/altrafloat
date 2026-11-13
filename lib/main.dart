@@ -594,7 +594,7 @@ class _LoginPageState extends State<LoginPage> {
       isLoggingIn = true;
     });
 
-  try {
+    try {
       // SIGN IN WITH FIREBASE
       await FirebaseAuth.instance.signInWithEmailAndPassword(
         email: email,
@@ -672,7 +672,7 @@ class _LoginPageState extends State<LoginPage> {
         return;
       }
 
-    // LOAD AND VERIFY THE AUTHORIZED PROFILE
+      // LOAD AND VERIFY THE AUTHORIZED PROFILE
       final role = isAgent ? 'Agent' : 'Liquidity Officer';
 
       Map<String, String>? profile;
@@ -833,7 +833,7 @@ class _LoginPageState extends State<LoginPage> {
   // ============================================================
   // MESSAGE
   // ============================================================
-void _logLoginFirestoreFailure(
+  void _logLoginFirestoreFailure(
   String operation,
   FirebaseException error,
 ) {
