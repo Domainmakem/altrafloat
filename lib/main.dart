@@ -595,26 +595,25 @@ class _LoginPageState extends State<LoginPage> {
     });
 
     try {
-      // SIGN IN WITH FIREBASE
-      await FirebaseAuth.instance.signInWithEmailAndPassword(
-        email: email,
-        password: password,
-      );
-
-      final signedInUser = FirebaseAuth.instance.currentUser;
-
-      if (signedInUser == null) {
-        throw FirebaseAuthException(code: 'user-not-found');
-      }
-      await FirebaseFirestore.instance
-          .collection('policyAcceptances')
-          .doc(signedInUser.uid)
-          .set({
-            'uid': signedInUser.uid,
-            'privacyPolicyVersion': privacyPolicyVersion,
-            'termsVersion': termsVersion,
-            'acceptedAt': FieldValue.serverTimestamp(),
-          });
+  await FirebaseFirestore.instance
+      .collection('policyAcceptances')
+      .doc(signedInUser.uid)
+      .set({
+        'uid': signedInUser.uid,
+        'privacyPolicyVersion': privacyPolicyVersion,
+        'termsVersion': termsVersion,
+        'acceptedAt': FieldValue.serverTimestamp(),
+      });
+} on FirebaseException catch (error) {
+  _logLoginFirestoreFailure('policy_acceptance_write', error);
+  await FcmService.instance.signOut();
+  if (!mounted) return;
+  _showMessage(
+    'Could not save your Privacy Policy and Terms acceptance. '
+    'Please try again.',
+  );
+  return;
+}
       // CHECK THE SERVER-ASSIGNED AI MANAGER CLAIM
       final tokenResult = await signedInUser.getIdTokenResult(true);
 
@@ -659,14 +658,23 @@ class _LoginPageState extends State<LoginPage> {
         return;
       }
 
-      // LOAD AND VERIFY THE AUTHORIZED PROFILE
-      final role = isAgent ? 'Agent' : 'Liquidity Officer';
-
-      final profile = await AppStorage.loadAuthorizedProfile(
-        role: role,
-        id: RegistrationIdValidator.normalize(userId),
-        distinguishPendingAuthorization: true,
-      );
+      Map<String, String>? profile;
+try {
+  profile = await AppStorage.loadAuthorizedProfile(
+    role: role,
+    id: RegistrationIdValidator.normalize(userId),
+    distinguishPendingAuthorization: true,
+  );
+} on FirebaseException catch (error) {
+  _logLoginFirestoreFailure('profile_authorization_read', error);
+  await FcmService.instance.signOut();
+  if (!mounted) return;
+  _showMessage(
+    'Could not read and verify your authorization profile. '
+    'Please try again.',
+  );
+  return;
+}
 
       if (profile == null) {
         await FcmService.instance.signOut();
@@ -808,7 +816,18 @@ class _LoginPageState extends State<LoginPage> {
   // ============================================================
   // MESSAGE
   // ============================================================
-
+void _logLoginFirestoreFailure(
+  String operation,
+  FirebaseException error,
+) {
+  if (kDebugMode) {
+    debugPrint(
+      'Login Firestore failure: operation=$operation '
+      'code=${error.code} plugin=${error.plugin} '
+      'message=${error.message ?? 'No message'}',
+    );
+  }
+}
   void _showMessage(String message) {
     if (!mounted) return;
 
