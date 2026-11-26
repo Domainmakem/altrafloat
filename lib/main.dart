@@ -10,6 +10,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'services/fcm_service.dart';
 import 'services/notification_service.dart';
 import 'services/chat_service.dart' as cs;
+import 'screens/legal_documents_page.dart';
 import 'firebase_options.dart';
 
 void main() async {
@@ -538,11 +539,6 @@ class _LoginPageState extends State<LoginPage> {
   bool isAgent = true;
   bool obscurePassword = true;
   bool isLoggingIn = false;
-  bool acceptedPrivacyPolicy = false;
-  bool acceptedTerms = false;
-
-  static const String privacyPolicyVersion = '1.0';
-  static const String termsVersion = '1.0';
 
   final TextEditingController usernameController = TextEditingController();
 
@@ -573,12 +569,6 @@ class _LoginPageState extends State<LoginPage> {
     final email = emailController.text.trim();
     final password = passwordController.text.trim();
     final userId = idController.text.trim();
-    if (!acceptedPrivacyPolicy || !acceptedTerms) {
-      _showMessage(
-        'Please accept the Privacy Policy and Terms before logging in.',
-      );
-      return;
-    }
     // BASIC VALIDATION
     if (email.isEmpty) {
       _showMessage('Please enter your email address.');
@@ -606,15 +596,6 @@ class _LoginPageState extends State<LoginPage> {
       if (signedInUser == null) {
         throw FirebaseAuthException(code: 'user-not-found');
       }
-      await FirebaseFirestore.instance
-          .collection('policyAcceptances')
-          .doc(signedInUser.uid)
-          .set({
-            'uid': signedInUser.uid,
-            'privacyPolicyVersion': privacyPolicyVersion,
-            'termsVersion': termsVersion,
-            'acceptedAt': FieldValue.serverTimestamp(),
-          });
       // CHECK THE SERVER-ASSIGNED AI MANAGER CLAIM
       final tokenResult = await signedInUser.getIdTokenResult(true);
 
@@ -852,31 +833,6 @@ class _LoginPageState extends State<LoginPage> {
                           const SizedBox(height: 8),
                           const AltrafloatBrand(large: true),
                           const SizedBox(height: 24),
-                          CheckboxListTile(
-                            value: acceptedPrivacyPolicy,
-                            onChanged: (value) {
-                              setState(
-                                () => acceptedPrivacyPolicy = value ?? false,
-                              );
-                            },
-                            title: const Text('I accept the Privacy Policy'),
-                            controlAffinity: ListTileControlAffinity.leading,
-                            contentPadding: EdgeInsets.zero,
-                          ),
-
-                          CheckboxListTile(
-                            value: acceptedTerms,
-                            onChanged: (value) {
-                              setState(() => acceptedTerms = value ?? false);
-                            },
-                            title: const Text(
-                              'I accept the Terms and Conditions',
-                            ),
-                            controlAffinity: ListTileControlAffinity.leading,
-                            contentPadding: EdgeInsets.zero,
-                          ),
-
-                          const SizedBox(height: 22),
 
                           // LOGIN CARD
                           Container(
@@ -4364,7 +4320,16 @@ class _SettingsPageState extends State<_SettingsPage> {
           ListTile(
             leading: const Icon(Icons.shield_outlined, color: blue),
             title: const Text('Privacy & security'),
-            onTap: () {},
+            subtitle: const Text('Privacy Policy and Terms & Conditions'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const PrivacySecurityPage(),
+                ),
+              );
+            },
           ),
           const SizedBox(height: 30),
           ElevatedButton.icon(
