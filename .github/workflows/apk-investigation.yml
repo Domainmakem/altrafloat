@@ -1,0 +1,56 @@
+name: Altrafloat APK Investigation
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout investigation branch
+        uses: actions/checkout@v4
+
+      - name: Verify required source files
+        run: |
+          test -f lib/main.dart
+          test -f lib/services/chat_service.dart
+          test -f pubspec.yaml
+          test -f android/app/build.gradle.kts
+          echo "Required source files are present."
+          git status --short
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Get Flutter dependencies
+        run: flutter pub get
+
+      - name: Create temporary Gradle wrapper
+        working-directory: android
+        run: |
+          curl -L https://services.gradle.org/distributions/gradle-8.10.2-bin.zip -o /tmp/gradle.zip
+          unzip -q /tmp/gradle.zip -d /tmp
+          /tmp/gradle-8.10.2/bin/gradle wrapper --gradle-version 8.10.2
+
+      - name: Build debug APK
+        run: flutter build apk --debug
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: altrafloat-investigation-apk
+          path: build/app/outputs/flutter-apk/app-debug.apk
+          if-no-files-found: error
