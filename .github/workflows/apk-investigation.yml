@@ -17,8 +17,13 @@ jobs:
       - name: Checkout investigation branch
         uses: actions/checkout@v4
 
-      - name: Verify required source files
+      - name: Create temporary Gradle wrapper
+        working-directory: android
         run: |
+          curl -L https://services.gradle.org/distributions/gradle-9.3.1-bin.zip -o /tmp/gradle.zip
+          unzip -q /tmp/gradle.zip -d /tmp
+          /tmp/gradle-9.3.1/bin/gradle wrapper --gradle-version 9.3.1
+    
           test -f lib/main.dart
           test -f lib/services/chat_service.dart
           test -f pubspec.yaml
