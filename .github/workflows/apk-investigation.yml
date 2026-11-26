@@ -1,6 +1,9 @@
 name: Altrafloat APK Investigation
 
 on:
+  push:
+    branches:
+      - investigation/apk-validation-2026-11-25
   workflow_dispatch:
 
 permissions:
