@@ -1,0 +1,59 @@
+name: Altrafloat APK Validation
+
+on:
+  push:
+    branches:
+      - validation/main-legal-apk-2026-11-26
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout validation branch
+        uses: actions/checkout@v4
+
+      - name: Verify required source files
+        run: |
+          test -f lib/main.dart
+          test -f lib/screens/legal_documents_page.dart
+          test -f test/legal_documents_test.dart
+          test -f pubspec.yaml
+          test -f android/app/build.gradle.kts
+          echo "Required source files are present."
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Get Flutter dependencies
+        run: flutter pub get
+
+      - name: Create temporary Gradle wrapper
+        working-directory: android
+        run: |
+          curl -L https://services.gradle.org/distributions/gradle-9.3.1-bin.zip -o /tmp/gradle.zip
+          unzip -q /tmp/gradle.zip -d /tmp
+          /tmp/gradle-9.3.1/bin/gradle wrapper --gradle-version 9.3.1
+
+      - name: Build debug APK
+        run: flutter build apk --debug
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: altrafloat-validation-apk
+          path: build/app/outputs/flutter-apk/app-debug.apk
+          if-no-files-found: error
