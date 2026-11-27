@@ -193,6 +193,24 @@ service cloud.firestore {
       return request.auth != null
         && request.auth.uid in data.participantUids
         && isAuthorizedChatUser();
+   function canCheckMissingConversation(requestId) {
+  let requestPath =
+    /databases/$(database)/documents/requests/$(requestId);
+
+  return request.auth != null
+    && exists(requestPath)
+    && get(requestPath).data.status == 'accepted'
+    && (
+      (
+        get(requestPath).data.agentUid == request.auth.uid
+        && isAuthorizedForRole('Agent')
+      )
+      || (
+        get(requestPath).data.loUid == request.auth.uid
+        && isAuthorizedForRole('Liquidity Officer')
+      )
+    );
+}
     }
 
     function conversationMatchesAcceptedRequest(data, requestId) {
@@ -362,7 +380,15 @@ service cloud.firestore {
     }
 
     match /conversations/{requestId} {
-      allow get, list: if canAccessConversation(resource.data);
+      allow get: if (
+    !exists(
+      /databases/$(database)/documents/conversations/$(requestId)
+    )
+    && canCheckMissingConversation(requestId)
+  )
+  || canAccessConversation(resource.data);
+
+  allow list: if canAccessConversation(resource.data);
       allow create: if validConversation(request.resource.data, requestId)
         && request.resource.data.createdAt == request.time
         && isAuthorizedConversationParticipant(request.resource.data)
