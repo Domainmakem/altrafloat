@@ -1,3 +1,4 @@
+
 name: Altrafloat Android APK
 
 on:
@@ -16,6 +17,12 @@ jobs:
     steps:
       - name: Get source code
         uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
 
       - name: Install Flutter
         uses: subosito/flutter-action@v2
@@ -36,4 +43,3 @@ jobs:
           path: build/app/outputs/flutter-apk/app-release.apk
           if-no-files-found: error
           retention-days: 14
-
