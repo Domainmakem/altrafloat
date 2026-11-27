@@ -3,7 +3,7 @@ import 'dart:convert';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -2784,7 +2784,7 @@ class _NewRequestDialogState extends State<_NewRequestDialog> {
           mainAxisSize: MainAxisSize.min,
           children: [
             DropdownButtonFormField<String>(
-              value: _typeController.text,
+              initialValue: _typeController.text,
               decoration: const InputDecoration(labelText: 'Request Type'),
               items: const [
                 DropdownMenuItem(
@@ -2806,7 +2806,7 @@ class _NewRequestDialogState extends State<_NewRequestDialog> {
             ),
             const SizedBox(height: 12),
             DropdownButtonFormField<String>(
-              value: _selectedOfficerUid,
+              initialValue: _selectedOfficerUid,
               decoration: const InputDecoration(labelText: 'Liquidity Officer'),
               items:
                   widget.availableOfficers
@@ -3783,7 +3783,7 @@ class _LiquidityOfficerDashboardState extends State<LiquidityOfficerDashboard> {
                         children: [
                           Switch(
                             value: online,
-                            activeColor: green,
+                            activeThumbColor: green,
                             onChanged: _setAvailability,
                           ),
                           const Flexible(
@@ -4237,14 +4237,14 @@ class _SettingsPageState extends State<_SettingsPage> {
             onChanged: (value) => setState(() => notificationsEnabled = value),
             title: const Text('Push notifications'),
             subtitle: const Text('Receive request and message alerts'),
-            activeColor: blue,
+            activeThumbColor: blue,
           ),
           SwitchListTile(
             value: soundEnabled,
             onChanged: (value) => setState(() => soundEnabled = value),
             title: const Text('Sound alerts'),
             subtitle: const Text('Play sound for new notifications'),
-            activeColor: blue,
+            activeThumbColor: blue,
           ),
           const SizedBox(height: 16),
           ListTile(
@@ -5348,7 +5348,7 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
                 const SizedBox(height: 15),
 
                 DropdownButtonFormField<String>(
-                  value:
+                  initialValue:
                       categoryController.text.isEmpty
                           ? null
                           : categoryController.text,
