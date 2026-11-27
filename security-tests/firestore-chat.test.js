@@ -32,6 +32,7 @@ const PROJECT_ID = 'demo-altrafloat';
 const AGENT_UID = 'agent-test-001';
 const LO_UID = 'lo-test-001';
 const OTHER_AGENT_UID = 'agent-test-002';
+const OTHER_LO_UID = 'lo-test-002';
 
 const REQUEST_ID = 'accepted-request-001';
 
@@ -101,6 +102,20 @@ beforeEach(async () => {
       role: 'Agent',
     });
 
+    await setDoc(doc(db, 'users', OTHER_LO_UID), {
+      uid: OTHER_LO_UID,
+      username: 'Other Officer',
+      role: 'Liquidity Officer',
+      id: 'S0123457',
+      category: 'Test',
+      authorized: true,
+    });
+
+    await setDoc(doc(db, 'registrationIds', 'S0123457'), {
+      uid: OTHER_LO_UID,
+      role: 'Liquidity Officer',
+    });
+
     await setDoc(doc(db, 'requests', REQUEST_ID), {
       agentUid: AGENT_UID,
       loUid: LO_UID,
@@ -140,16 +155,32 @@ async function createConversation(uid = AGENT_UID) {
   );
 }
 
-test('Agent is denied access to a conversation that does not exist yet', async () => {
+test('Assigned Agent can check a missing conversation for an accepted request', async () => {
   const db = authenticatedDb(AGENT_UID);
+
+  await assertSucceeds(
+    getDoc(doc(db, 'conversations', REQUEST_ID)),
+  );
+});
+
+test('Assigned Liquidity Officer can check a missing conversation for an accepted request', async () => {
+  const db = authenticatedDb(LO_UID);
+
+  await assertSucceeds(
+    getDoc(doc(db, 'conversations', REQUEST_ID)),
+  );
+});
+
+test('An unrelated Agent cannot check a missing conversation', async () => {
+  const db = authenticatedDb(OTHER_AGENT_UID);
 
   await assertFails(
     getDoc(doc(db, 'conversations', REQUEST_ID)),
   );
 });
 
-test('Liquidity Officer is denied access to a conversation that does not exist yet', async () => {
-  const db = authenticatedDb(LO_UID);
+test('An unrelated authorized Liquidity Officer cannot check a missing conversation', async () => {
+  const db = authenticatedDb(OTHER_LO_UID);
 
   await assertFails(
     getDoc(doc(db, 'conversations', REQUEST_ID)),
@@ -194,6 +225,27 @@ test('An unrelated Agent cannot read an existing conversation', async () => {
     getDoc(
       doc(authenticatedDb(OTHER_AGENT_UID), 'conversations', REQUEST_ID),
     ),
+  );
+});
+
+test('Participants cannot check a missing conversation while the request is pending', async () => {
+  await testEnv.withSecurityRulesDisabled(async (context) => {
+    await setDoc(
+      doc(context.firestore(), 'requests', REQUEST_ID),
+      {
+        agentUid: AGENT_UID,
+        loUid: LO_UID,
+        status: 'pending',
+      },
+    );
+  });
+
+  await assertFails(
+    getDoc(doc(authenticatedDb(AGENT_UID), 'conversations', REQUEST_ID)),
+  );
+
+  await assertFails(
+    getDoc(doc(authenticatedDb(LO_UID), 'conversations', REQUEST_ID)),
   );
 });
 
