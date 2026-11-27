@@ -213,20 +213,19 @@ service cloud.firestore {
         );
     }
 
-    function conversationMatchesAcceptedRequest(data, requestId) {
+       function conversationMatchesAcceptedRequest(data, requestId) {
       let requestPath = /databases/$(database)/documents/requests/$(requestId);
       let before = get(requestPath).data;
       let after = getAfter(requestPath).data;
       return after.status == 'accepted'
         && after.agentUid == data.agentUid
         && after.loUid == data.loUid
-        && isAuthorizedChatUser();
-        
+        && (
           before.status == 'accepted'
           || (before.status == 'pending'
             && request.auth.uid == after.loUid)
         );
-    }
+    } 
 
     function canAccessConversationMessages(requestId) {
       let conversationPath = /databases/$(database)/documents/conversations/$(requestId);
