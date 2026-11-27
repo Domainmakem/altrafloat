@@ -6,7 +6,7 @@
   "description": "Local Firestore security tests for Altrafloat",
   "scripts": {
     "test": "node --test",
-    "test:emulator": "firebase emulators:exec --only firestore --project demo-altrafloat \"npm test\""
+    "test:emulator": "firebase emulators:exec --config ../firebase.json --only firestore --project demo-altrafloat \"npm test\""
   },
   "devDependencies": {
     "@firebase/rules-unit-testing": "^4.0.1",
