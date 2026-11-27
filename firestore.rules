@@ -188,29 +188,29 @@ service cloud.firestore {
       return isAuthorizedForRole('Agent')
         || isAuthorizedForRole('Liquidity Officer');
     }
-
     function canAccessConversation(data) {
       return request.auth != null
         && request.auth.uid in data.participantUids
         && isAuthorizedChatUser();
-   function canCheckMissingConversation(requestId) {
-  let requestPath =
-    /databases/$(database)/documents/requests/$(requestId);
+    }
 
-  return request.auth != null
-    && exists(requestPath)
-    && get(requestPath).data.status == 'accepted'
-    && (
-      (
-        get(requestPath).data.agentUid == request.auth.uid
-        && isAuthorizedForRole('Agent')
-      )
-      || (
-        get(requestPath).data.loUid == request.auth.uid
-        && isAuthorizedForRole('Liquidity Officer')
-      )
-    );
-}
+    function canCheckMissingConversation(requestId) {
+      let requestPath =
+        /databases/$(database)/documents/requests/$(requestId);
+
+      return request.auth != null
+        && exists(requestPath)
+        && get(requestPath).data.status == 'accepted'
+        && (
+          (
+            get(requestPath).data.agentUid == request.auth.uid
+            && isAuthorizedForRole('Agent')
+          )
+          || (
+            get(requestPath).data.loUid == request.auth.uid
+            && isAuthorizedForRole('Liquidity Officer')
+          )
+        );
     }
 
     function conversationMatchesAcceptedRequest(data, requestId) {
@@ -220,7 +220,8 @@ service cloud.firestore {
       return after.status == 'accepted'
         && after.agentUid == data.agentUid
         && after.loUid == data.loUid
-        && (
+        && isAuthorizedChatUser();
+        
           before.status == 'accepted'
           || (before.status == 'pending'
             && request.auth.uid == after.loUid)
