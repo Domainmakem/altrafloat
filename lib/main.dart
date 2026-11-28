@@ -3702,7 +3702,8 @@ class _LiquidityOfficerDashboardState extends State<LiquidityOfficerDashboard> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
-                  Widget _agentProfileCard() {
+                  const _TimeBasedGreeting(),
+
                   style: TextStyle(color: darkText, fontSize: 13),
                 ),
                 const SizedBox(height: 2),
