@@ -1511,6 +1511,7 @@ class _LoginField extends StatelessWidget {
 // ALTRAfloat BRAND
 // ============================================================
 
+
 class AltrafloatBrand extends StatelessWidget {
   final bool large;
 
@@ -1518,68 +1519,74 @@ class AltrafloatBrand extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              width: large ? 62 : 45,
-              height: large ? 62 : 45,
-              decoration: BoxDecoration(
-                color: blue,
-                borderRadius: BorderRadius.circular(18),
-                boxShadow: [
-                  BoxShadow(
-                    color: blue.withValues(alpha: .25),
-                    blurRadius: 12,
-                    offset: const Offset(0, 5),
-                  ),
-                ],
-              ),
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  const Icon(Icons.more_horiz, color: Colors.white, size: 34),
-                  Positioned(
-                    bottom: 4,
-                    left: 9,
-                    child: CustomPaint(
-                      size: const Size(14, 10),
-                      painter: _TrianglePainter(),
+    return Padding(
+      padding: const EdgeInsets.only(top: 8, bottom: 8),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                width: large ? 62 : 45,
+                height: large ? 62 : 45,
+                decoration: BoxDecoration(
+                  color: blue,
+                  borderRadius: BorderRadius.circular(18),
+                  boxShadow: [
+                    BoxShadow(
+                      color: blue.withValues(alpha: .25),
+                      blurRadius: 12,
+                      offset: const Offset(0, 5),
                     ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 12),
-            RichText(
-              text: TextSpan(
-                style: TextStyle(
-                  fontSize: large ? 48 : 25,
-                  fontWeight: FontWeight.w900,
+                  ],
                 ),
-                children: const [
-                  TextSpan(text: 'Altra', style: TextStyle(color: darkBlue)),
-                  TextSpan(text: 'float', style: TextStyle(color: red)),
-                ],
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    const Icon(Icons.more_horiz, color: Colors.white, size: 34),
+                    Positioned(
+                      bottom: 4,
+                      left: 9,
+                      child: CustomPaint(
+                        size: const Size(14, 10),
+                        painter: _TrianglePainter(),
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 4),
-        Text(
-          'Agent & Liquidity Officer Communication',
-          style: TextStyle(
-            color: const Color(0xFF52749C),
-            fontSize: large ? 17 : 10,
-            fontWeight: FontWeight.w500,
+              const SizedBox(width: 12),
+              RichText(
+                text: TextSpan(
+                  style: TextStyle(
+                    fontSize: large ? 48 : 25,
+                    fontWeight: FontWeight.w900,
+                  ),
+                  children: const [
+                    TextSpan(text: 'Altra', style: TextStyle(color: darkBlue)),
+                    TextSpan(text: 'float', style: TextStyle(color: red)),
+                  ],
+                ),
+              ),
+            ],
           ),
-        ),
-      ],
+          const SizedBox(height: 6),
+          Text(
+            'Agent & Liquidity Officer Communication',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: const Color(0xFF52749C),
+              fontSize: large ? 17 : 10,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
+
 
 class _TrianglePainter extends CustomPainter {
   @override
@@ -1995,26 +2002,29 @@ class _AgentDashboardState extends State<AgentDashboard> {
     return _agentHome();
   }
 
-  PreferredSizeWidget _dashboardAppBar(
+  
+PreferredSizeWidget _dashboardAppBar(
     BuildContext context, {
     required String role,
     required VoidCallback onProfile,
     required VoidCallback onNotifications,
   }) {
     return AppBar(
+      toolbarHeight: 76,
       backgroundColor: const Color(0xFFF2F9FE),
       elevation: 0,
       centerTitle: false,
-      leading: IconButton(
-        icon: const Icon(Icons.menu, color: darkBlue, size: 28),
-        onPressed: () {},
-      ),
-      titleSpacing: 0,
+      automaticallyImplyLeading: false,
+      titleSpacing: 12,
       title: const AltrafloatBrand(),
       actions: [
         IconButton(
           onPressed: onNotifications,
-          icon: const Icon(Icons.notifications_none, color: darkBlue, size: 28),
+          icon: const Icon(
+            Icons.notifications_none,
+            color: darkBlue,
+            size: 28,
+          ),
         ),
         IconButton(
           onPressed: _confirmLogout,
@@ -2034,65 +2044,8 @@ class _AgentDashboardState extends State<AgentDashboard> {
     );
   }
 
-  Widget _requestsPage() {
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        const Text(
-          'My Requests',
-          style: TextStyle(
-            color: darkBlue,
-            fontSize: 24,
-            fontWeight: FontWeight.w800,
-          ),
-        ),
-        const SizedBox(height: 16),
-        if (requests.isEmpty)
-          const Text('No requests yet.')
-        else
-          ...requests.map(
-            (request) => _whiteCard(
-              padding: const EdgeInsets.all(12),
-              child: Row(
-                children: [
-                  _Avatar(
-                    letter:
-                        (request['letter'] ?? 'A')
-                            .toString()
-                            .substring(0, 1)
-                            .toUpperCase(),
-                    size: 42,
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          request['type']?.toString() ?? 'Request',
-                          style: const TextStyle(
-                            color: darkBlue,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 14,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          '${request['amount'] ?? ''} • ${request['status'] ?? 'pending'}\nTo: ${request['loName'] ?? 'Liquidity Officer'}',
-                          style: const TextStyle(color: greyText, fontSize: 12),
-                        ),
-                        if (request['declineReason'] is String &&
-                            (request['declineReason'] as String).isNotEmpty)
-                          Text(
-                            'Reason: ${request['declineReason']}',
-                            style: const TextStyle(
-                              color: greyText,
-                              fontSize: 12,
-                            ),
-                          ),
-                      ],
-                    ),
-                  ),
+             
+
                   Text(
                     request['time']?.toString() ?? '',
                     style: const TextStyle(color: greyText, fontSize: 11),
@@ -3271,46 +3224,45 @@ class _LiquidityOfficerDashboardState extends State<LiquidityOfficerDashboard> {
       );
     }
 
-    return Scaffold(
-      backgroundColor: const Color(0xFFF2F9FE),
-      appBar: AppBar(
-        backgroundColor: const Color(0xFFF2F9FE),
-        elevation: 0,
-        leading: IconButton(
-          onPressed: () {},
-          icon: const Icon(Icons.menu, color: darkBlue, size: 28),
+    
+return Scaffold(
+  backgroundColor: const Color(0xFFF2F9FE),
+  appBar: AppBar(
+    toolbarHeight: 76,
+    backgroundColor: const Color(0xFFF2F9FE),
+    elevation: 0,
+    automaticallyImplyLeading: false,
+    titleSpacing: 12,
+    title: const AltrafloatBrand(),
+    actions: [
+      IconButton(
+        onPressed: _openNotificationsPage,
+        icon: const Icon(
+          Icons.notifications_none,
+          color: darkBlue,
+          size: 28,
         ),
-        titleSpacing: 0,
-        title: const AltrafloatBrand(),
-        actions: [
-          IconButton(
-            onPressed: _openNotificationsPage,
-            icon: const Icon(
-              Icons.notifications_none,
-              color: darkBlue,
-              size: 28,
-            ),
-          ),
-          IconButton(
-            onPressed: _confirmLogout,
-            icon: const Icon(Icons.logout, color: darkBlue, size: 26),
-            tooltip: 'Logout',
-          ),
-          IconButton(
-            onPressed: _openProfilePage,
-            icon: const CircleAvatar(
-              radius: 18,
-              backgroundColor: Color(0xFFDDF0FF),
-              child: Icon(Icons.person, color: darkBlue),
-            ),
-          ),
-          const SizedBox(width: 5),
-        ],
       ),
-      body: SafeArea(child: _loBody()),
-      bottomNavigationBar: _loNavigation(),
-    );
-  }
+      IconButton(
+        onPressed: _confirmLogout,
+        icon: const Icon(Icons.logout, color: darkBlue, size: 26),
+        tooltip: 'Logout',
+      ),
+      IconButton(
+        onPressed: _openProfilePage,
+        icon: const CircleAvatar(
+          radius: 18,
+          backgroundColor: Color(0xFFDDF0FF),
+          child: Icon(Icons.person, color: darkBlue),
+        ),
+      ),
+      const SizedBox(width: 5),
+    ],
+  ),
+  body: SafeArea(child: _loBody()),
+  bottomNavigationBar: _loNavigation(),
+);
+
 
   Widget _loBody() {
     if (selectedIndex == 1) return _requestsPage();
