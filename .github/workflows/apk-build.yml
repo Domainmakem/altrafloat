@@ -1,0 +1,52 @@
+name: Altrafloat Android APK
+
+on:
+  push:
+    branches:
+      - fix/chat-conversation-read-authorization
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Get source code
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.47.9'
+          channel: stable
+
+      - name: Get dependencies and update lockfile
+        run: flutter pub get
+
+      - name: Build release APK
+        run: flutter build apk --release
+
+      - name: Upload generated lockfile
+        uses: actions/upload-artifact@v4
+        with:
+          name: updated-pubspec-lock
+          path: pubspec.lock
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: altrafloat-release-apk
+          path: build/app/outputs/flutter-apk/app-release.apk
+          if-no-files-found: error
+          retention-days: 14
