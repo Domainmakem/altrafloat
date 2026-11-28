@@ -1989,7 +1989,7 @@ class _AgentDashboardState extends State<AgentDashboard> {
     );
   }
 
-  Widget _agentBody() {
+    Widget _agentBody() {
     if (selectedIndex == 1) {
       return _requestsPage();
     }
@@ -2001,9 +2001,9 @@ class _AgentDashboardState extends State<AgentDashboard> {
     }
     return _agentHome();
   }
-
-  
-PreferredSizeWidget _dashboardAppBar(
+        
+      
+  PreferredSizeWidget _dashboardAppBar(
     BuildContext context, {
     required String role,
     required VoidCallback onProfile,
@@ -2044,23 +2044,93 @@ PreferredSizeWidget _dashboardAppBar(
     );
   }
 
-             
-
+  Widget _requestsPage() {
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        const Text(
+          'My Requests',
+          style: TextStyle(
+            color: darkBlue,
+            fontSize: 24,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+        const SizedBox(height: 16),
+        if (requests.isEmpty)
+          const Text('No requests yet.')
+        else
+          ...requests.map(
+            (request) => _whiteCard(
+              padding: const EdgeInsets.all(12),
+              child: Row(
+                children: [
+                  _Avatar(
+                    letter:
+                        (request['letter'] ?? 'A')
+                            .toString()
+                            .substring(0, 1)
+                            .toUpperCase(),
+                    size: 42,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          request['type']?.toString() ?? 'Request',
+                          style: const TextStyle(
+                            color: darkBlue,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          '${request['amount'] ?? ''} • ${request['status'] ?? 'pending'}\nTo: ${request['loName'] ?? 'Liquidity Officer'}',
+                          style: const TextStyle(
+                            color: greyText,
+                            fontSize: 12,
+                          ),
+                        ),
+                        if (request['declineReason'] is String &&
+                            (request['declineReason'] as String).isNotEmpty)
+                          Text(
+                            'Reason: ${request['declineReason']}',
+                            style: const TextStyle(
+                              color: greyText,
+                              fontSize: 12,
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
                   Text(
                     request['time']?.toString() ?? '',
-                    style: const TextStyle(color: greyText, fontSize: 11),
+                    style: const TextStyle(
+                      color: greyText,
+                      fontSize: 11,
+                    ),
                   ),
                   if (request['status'] == 'accepted')
                     IconButton(
                       tooltip: 'Open Chat',
-                      icon: const Icon(Icons.chat_bubble_outline, color: blue),
-                      onPressed: () => _openConversationForRequest(request),
+                      icon: const Icon(
+                        Icons.chat_bubble_outline,
+                        color: blue,
+                      ),
+                      onPressed: () =>
+                          _openConversationForRequest(request),
                     ),
                   if (request['status'] == 'pending')
                     IconButton(
                       tooltip: 'Cancel request',
                       onPressed: () => _cancelRequest(request),
-                      icon: const Icon(Icons.cancel_outlined, color: red),
+                      icon: const Icon(
+                        Icons.cancel_outlined,
+                        color: red,
+                      ),
                     ),
                 ],
               ),
@@ -2069,6 +2139,7 @@ PreferredSizeWidget _dashboardAppBar(
       ],
     );
   }
+
 
   Widget _conversationsPage() {
     final acceptedRequests =
@@ -3224,81 +3295,81 @@ class _LiquidityOfficerDashboardState extends State<LiquidityOfficerDashboard> {
       );
     }
 
-    
-return Scaffold(
-  backgroundColor: const Color(0xFFF2F9FE),
-  appBar: AppBar(
-    toolbarHeight: 76,
+
+      return Scaffold(
     backgroundColor: const Color(0xFFF2F9FE),
-    elevation: 0,
-    automaticallyImplyLeading: false,
-    titleSpacing: 12,
-    title: const AltrafloatBrand(),
-    actions: [
-      IconButton(
-        onPressed: _openNotificationsPage,
-        icon: const Icon(
-          Icons.notifications_none,
-          color: darkBlue,
-          size: 28,
-        ),
-      ),
-      IconButton(
-        onPressed: _confirmLogout,
-        icon: const Icon(Icons.logout, color: darkBlue, size: 26),
-        tooltip: 'Logout',
-      ),
-      IconButton(
-        onPressed: _openProfilePage,
-        icon: const CircleAvatar(
-          radius: 18,
-          backgroundColor: Color(0xFFDDF0FF),
-          child: Icon(Icons.person, color: darkBlue),
-        ),
-      ),
-      const SizedBox(width: 5),
-    ],
-  ),
-  body: SafeArea(child: _loBody()),
-  bottomNavigationBar: _loNavigation(),
-);
-
-
-  Widget _loBody() {
-    if (selectedIndex == 1) return _requestsPage();
-    if (selectedIndex == 2) return _historyPage();
-    if (selectedIndex == 3) return _conversationsPage();
-    if (selectedIndex == 4) return _morePage();
-    return _loHome();
-  }
-
-  Widget _requestsPage() {
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        const Text(
-          'Incoming Requests',
-          style: TextStyle(
+    appBar: AppBar(
+      toolbarHeight: 76,
+      backgroundColor: const Color(0xFFF2F9FE),
+      elevation: 0,
+      automaticallyImplyLeading: false,
+      titleSpacing: 12,
+      title: const AltrafloatBrand(),
+      actions: [
+        IconButton(
+          onPressed: _openNotificationsPage,
+          icon: const Icon(
+            Icons.notifications_none,
             color: darkBlue,
-            fontSize: 24,
-            fontWeight: FontWeight.w800,
+            size: 28,
           ),
         ),
-        const SizedBox(height: 16),
-        if (!requests.any((request) => request['status'] == 'pending'))
-          const Text('No incoming requests.')
-        else
-          ...requests
-              .where((request) => request['status'] == 'pending')
-              .map(
-                (request) => Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
-                  child: _incomingRequest(request),
-                ),
-              ),
+        IconButton(
+          onPressed: _confirmLogout,
+          icon: const Icon(Icons.logout, color: darkBlue, size: 26),
+          tooltip: 'Logout',
+        ),
+        IconButton(
+          onPressed: _openProfilePage,
+          icon: const CircleAvatar(
+            radius: 18,
+            backgroundColor: Color(0xFFDDF0FF),
+            child: Icon(Icons.person, color: darkBlue),
+          ),
+        ),
+        const SizedBox(width: 5),
       ],
-    );
-  }
+    ),
+    body: SafeArea(child: _loBody()),
+    bottomNavigationBar: _loNavigation(),
+  );
+}
+
+Widget _loBody() {
+  if (selectedIndex == 1) return _requestsPage();
+  if (selectedIndex == 2) return _historyPage();
+  if (selectedIndex == 3) return _conversationsPage();
+  if (selectedIndex == 4) return _morePage();
+  return _loHome();
+}
+
+Widget _requestsPage() {
+  return ListView(
+    padding: const EdgeInsets.all(16),
+    children: [
+      const Text(
+        'Incoming Requests',
+        style: TextStyle(
+          color: darkBlue,
+          fontSize: 24,
+          fontWeight: FontWeight.w800,
+        ),
+      ),
+      const SizedBox(height: 16),
+      if (!requests.any((request) => request['status'] == 'pending'))
+        const Text('No incoming requests.')
+      else
+        ...requests
+            .where((request) => request['status'] == 'pending')
+            .map(
+              (request) => Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: _incomingRequest(request),
+              ),
+            ),
+    ],
+  );
+}
 
   Widget _historyPage() {
     final history =
