@@ -55,8 +55,8 @@ The initial tests cover:
 - Message deletion restrictions.
 
 ## Important
-
-The initial conversation-read tests intentionally record the current
-rules' behaviour. They are not a proposed security-rule correction.
+These tests verify the proposed Firestore rules in this branch. They run
+against the local Firestore Emulator and do not deploy rules to the live
+Firebase project.
 
 Do not deploy rules as part of running these tests.
