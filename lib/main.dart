@@ -2309,34 +2309,30 @@ class _AgentDashboardState extends State<AgentDashboard> {
   }
 
   Widget _agentProfileCard() {
-    final username = profile['username'] ?? 'Altrafloat User';
-    final id = profile['id'] ?? '';
-    final category = profile['category'] ?? 'Main Agent';
-    final firstLetter = username.isNotEmpty ? username[0].toUpperCase() : 'A';
+  final username = profile['username'] ?? 'Altrafloat User';
+  final id = profile['id'] ?? '';
+  final category = profile['category'] ?? 'Main Agent';
+  final firstLetter = username.isNotEmpty ? username[0].toUpperCase() : 'A';
 
-    return _whiteCard(
-      child: Row(
-        children: [
-          _Avatar(letter: firstLetter, size: 62),
-          const SizedBox(width: 13),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                
-            const _TimeBasedGreeting(),
-                
-                  style: TextStyle(color: darkText, fontSize: 13),
+  return _whiteCard(
+    child: Row(
+      children: [
+        _Avatar(letter: firstLetter, size: 62),
+        const SizedBox(width: 13),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const _TimeBasedGreeting(),
+              const SizedBox(height: 2),
+              Text(
+                username,
+                style: const TextStyle(
+                  color: darkBlue,
+                  fontSize: 21,
+                  fontWeight: FontWeight.w800,
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  username,
-                  style: const TextStyle(
-                    color: darkBlue,
-                    fontSize: 21,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
+              ),
                 Text(
                   'Agent ID: $id',
                   style: const TextStyle(color: greyText, fontSize: 12),
@@ -3686,35 +3682,31 @@ class _LiquidityOfficerDashboardState extends State<LiquidityOfficerDashboard> {
       ),
     );
   }
+Widget _loProfileCard() {
+  final username = profile['username'] ?? 'Liquidity Officer';
+  final id = profile['id'] ?? '';
+  final firstLetter = username.isNotEmpty ? username[0].toUpperCase() : 'L';
 
-  Widget _loProfileCard() {
-    final username = profile['username'] ?? 'Liquidity Officer';
-    final id = profile['id'] ?? '';
-    final firstLetter = username.isNotEmpty ? username[0].toUpperCase() : 'L';
-
-    return _whiteCard(
-      child: Row(
-        children: [
-          _Avatar(letter: firstLetter, size: 62),
-          const SizedBox(width: 13),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  const _TimeBasedGreeting(),
-
-                  style: TextStyle(color: darkText, fontSize: 13),
+  return _whiteCard(
+    child: Row(
+      children: [
+        _Avatar(letter: firstLetter, size: 62),
+        const SizedBox(width: 13),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const _TimeBasedGreeting(),
+              const SizedBox(height: 2),
+              Text(
+                username,
+                style: const TextStyle(
+                  color: darkBlue,
+                  fontSize: 20,
+                  fontWeight: FontWeight.w800,
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  username,
-                  style: const TextStyle(
-                    color: darkBlue,
-                    fontSize: 20,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
+              ),
+  
                 Text(
                   'LO ID: $id',
                   style: const TextStyle(color: greyText, fontSize: 12),
