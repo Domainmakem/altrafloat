@@ -45,6 +45,75 @@ class AltrafloatApp extends StatelessWidget {
   }
 }
 
+class _TimeBasedGreeting extends StatefulWidget {
+  const _TimeBasedGreeting();
+
+  @override
+  State<_TimeBasedGreeting> createState() =>
+      _TimeBasedGreetingState();
+}
+
+class _TimeBasedGreetingState extends State<_TimeBasedGreeting> {
+  Timer? _refreshTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    _scheduleNextRefresh();
+  }
+
+  void _scheduleNextRefresh() {
+    final now = DateTime.now();
+
+    final boundaries = [
+      DateTime(now.year, now.month, now.day, 5),
+      DateTime(now.year, now.month, now.day, 12),
+      DateTime(now.year, now.month, now.day, 17),
+      DateTime(now.year, now.month, now.day + 1, 5),
+    ];
+
+    final nextBoundary =
+        boundaries.firstWhere((time) => time.isAfter(now));
+
+    _refreshTimer = Timer(
+      nextBoundary.difference(now),
+      () {
+        if (!mounted) return;
+        setState(() {});
+        _scheduleNextRefresh();
+      },
+    );
+  }
+
+  String _greeting() {
+    final hour = DateTime.now().hour;
+
+    if (hour >= 5 && hour < 12) {
+      return 'Good morning,';
+    }
+
+    if (hour >= 12 && hour < 17) {
+      return 'Good afternoon,';
+    }
+
+    return 'Good evening,';
+  }
+
+  @override
+  void dispose() {
+    _refreshTimer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      _greeting(),
+      style: const TextStyle(color: darkText, fontSize: 13),
+    );
+  }
+}
+
 // ============================================================
 // COLORS
 // ============================================================
@@ -2254,8 +2323,9 @@ class _AgentDashboardState extends State<AgentDashboard> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'Good morning,',
+                
+            const _TimeBasedGreeting(),
+                
                   style: TextStyle(color: darkText, fontSize: 13),
                 ),
                 const SizedBox(height: 2),
@@ -3632,7 +3702,7 @@ class _LiquidityOfficerDashboardState extends State<LiquidityOfficerDashboard> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
-                  'Good morning,',
+                  Widget _agentProfileCard() {
                   style: TextStyle(color: darkText, fontSize: 13),
                 ),
                 const SizedBox(height: 2),
